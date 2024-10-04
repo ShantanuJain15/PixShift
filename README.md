@@ -44,7 +44,7 @@ python run.py --image ./examples/wall_hanging.jpg  --class wall_haning --output 
 ![Wall_Hanging.jpg](/examples/wall_hanging.jpg) 
 
 ### Mask
-![Wall_Hanging.jpg](/Output/Wall_hanging.png)
+![Wall_Hanging.jpg](/Output/wall_hanging.png)
 
 
 ## Acknowledgments
