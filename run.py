@@ -27,7 +27,7 @@ def get_groundingdino_bounding_box(image_path, text_prompt):
     # print(image)
 
     # Make predictions using the model
-    boxes,_,_ = predict(
+    boxes,logits,phrases = predict(
         model=model,
         image=image,
         caption=text_prompt,
@@ -35,11 +35,11 @@ def get_groundingdino_bounding_box(image_path, text_prompt):
         text_threshold=0.25  # Adjust this threshold based on text relevance
     )
  
-    # # Show the image with bounding boxes
+    # Show the image with bounding boxes
     # annotated_image = annotate(image, boxes, phrases)
-    # annotated_frame = annotate(image_source=image_source, boxes=boxes, logits=logits, phrases=phrases)
-    # # plot_image_with_boxes(image, boxes, phrases)
-    # cv2.imwrite("annotated_image.jpg", annotated_frame)
+    annotated_frame = annotate(image_source=image_source, boxes=boxes, logits=logits, phrases=phrases)
+    # plot_image_with_boxes(image, boxes, phrases)
+    cv2.imwrite(f"Output/annotated/{phrases}.jpg", annotated_frame)
     return boxes, image
 
 def build_sam() :
@@ -145,7 +145,7 @@ def main():
         predictor=build_sam()
         image,mask,image_np = segment_with_sam(predictor,image_path, boxes)
         show_mask(mask,image_np,output_path)
-        save_images("bagpack",image,mask)
+        save_images(text_prompt,image,mask)
     
     elif args.x is not None and args.y is not None:
         pass
