@@ -18,7 +18,7 @@ bash scripts/download_model.sh
 ## Segmentating the Object using text prompt
 
 
- PROMPT = BAGPACK
+ PROMPT = BAGPACK  
  Detect the object based on text prompt using GroundingDino  
  ![Box on the object](/Output/annotated/['bagpack'].jpg)
 
