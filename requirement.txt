@@ -1,0 +1,9 @@
+torch
+torchvision
+Pillow
+matplotlib
+numpy
+opencv-python
+groundingdino-py
+segment-anything
+transformers
