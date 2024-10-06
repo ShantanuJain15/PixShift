@@ -92,23 +92,23 @@ python run.py --image ./examples/stool.jpeg  --class stool--output ./Output/stoo
 
 Extract the object from image using mask
 
-![object](Output\task2laptop\object.png)
+![object](Output/task2laptop/object.png)
 
 Shift the object and mask 
 
-![shifted object](Output\task2laptop\shifted_object.png)
+![shifted object](Output/task2laptop/shifted_object.png)
 
-![shifted mask](Output\task2laptop\shifted_mask.png)
+![shifted mask](Output/task2laptop/shifted_mask.png)
 
 
 Create a Black Hole on the image on the position of the shifted object
 
-![Black Hole](Output\task2laptop\black_hole.png)
+![Black Hole](Output/task2laptop/black_hole.png)
 
 
 Paste the shifted object on the Black hole Image
 
-![shifted Object](Output\task2laptop\shifted.png)
+![shifted Object](Output/task2laptop/shifted.png)
 
 
 
