@@ -20,6 +20,55 @@ Download pretrained model weights
 cd PROJECT_ROOT_DIR
 bash scripts/download_model.sh
 ```
+or run this python code on project_dir for downloading the pre-trained model
+```
+import requests
+
+# URL of the SAM model file you want to download
+sam_model_url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
+
+# Specify the output file path where you want to save the downloaded file
+sam_output_file = "sam_vit_h_4b8939.pth"
+
+# Send a GET request to the URL to download the SAM model file
+response = requests.get(sam_model_url)
+
+# Save the content of the response to the specified file
+with open(sam_output_file, "wb") as f:
+    f.write(response.content)
+
+print(f"SAM model downloaded successfully and saved as {sam_output_file}")
+
+# URL of the file you want to download
+url = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
+
+# Specify the output file path where you want to save the downloaded file
+output_file = "groundingdino_swint_ogc.pth"
+
+# Send a GET request to the URL to download the file
+response = requests.get(url)
+
+# Save the content of the response to the specified file
+with open(output_file, "wb") as f:
+    f.write(response.content)
+
+print(f"File downloaded successfully and saved as {output_file}")
+
+# URL of the file you want to download
+url = "https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+
+# Specify the output file path where you want to save the downloaded file
+output_file = "GroundingDINO_SwinT_OGC.py"
+
+# Send a GET request to the URL to download the file
+response = requests.get(url)
+
+# Save the content of the response to the specified file
+with open(output_file, "wb") as f:
+    f.write(response.content)
+
+print(f"File downloaded successfully and saved as {output_file}")
+```
 
  ## Command for TASK 1
 ```
