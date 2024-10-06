@@ -188,6 +188,11 @@ def main():
         
         object_img = extract_object(original_img, mask_img)
         shifted_object_img, shifted_mask_img = shift_object(object_img, mask_img, x, y)
+
+        os.makedirs(f'Output/task2{text_prompt}', exist_ok=True)
+        cv2.imwrite(f'Output/task2{text_prompt}/shifted_mask.png',shifted_mask_img )
+        cv2.imwrite(f'Output/task2{text_prompt}/shifted_object.png',shifted_object_img )
+        cv2.imwrite(f'Output/task2{text_prompt}/object.png',object_img)
     
 # Step 3: Use inpainting to remove the object from its original location
 # Convert images from OpenCV (BGR) to PIL (RGB) for Stable Diffusion
@@ -214,7 +219,7 @@ def main():
 # Now use the inverse mask to remove the area from the background where the object will be placed
         
         background_with_hole = cv2.bitwise_and(original_img, original_img, mask=inverse_mask)
-        cv2.imwrite('bwh.png', background_with_hole)
+        cv2.imwrite(f'Output/task2{text_prompt}/black_hole.png', background_with_hole)
         
         # Ensure the shifted object and background have the same size
         if shifted_object_img.shape[:2] != background_with_hole.shape[:2]:
@@ -231,7 +236,7 @@ def main():
         final_image = cv2.add(background_with_hole, shifted_object_img)
 
 # Save or display the result
-        
+        cv2.imwrite(f'Output/task2{text_prompt}/shifted.png',final_image )
         cv2.imwrite('shifted_object_composite.png', final_image)
 
 
