@@ -1,16 +1,18 @@
+import os
+import sys
+import argparse
+import warnings
 import torch
 from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.image
 import numpy as np
+import cv2
 import torchvision.transforms as T
 from groundingdino.util.inference import load_model, load_image, predict, annotate
 from segment_anything import SamPredictor, sam_model_registry
-import cv2
-import os
-import sys
-import argparse
-import warnings
+from diffusers import StableDiffusionInpaintPipeline
+
 
 # Load GroundingDINO model
 def load_groundingdino_model():
@@ -56,7 +58,7 @@ def upload_image(image_path):
     # plt.show()
     return image
 
-def show_mask(mask, image,path, color=[255, 0, 0], transparency=0.5):
+def show_mask(mask, image,path=None, color=[255, 0, 0], transparency=0.5):
     mask = mask.squeeze()  # Remove extra dimensions if any
     red_mask = np.zeros_like(image)
     red_mask[:, :] = color  # Set color for the mask
@@ -71,7 +73,8 @@ def show_mask(mask, image,path, color=[255, 0, 0], transparency=0.5):
     elif array.dtype == np.uint8:
         array = array / 255.0  # Normalize to [0, 1] for floats
 
-    matplotlib.image.imsave(path, array)
+    if path is not None :
+        matplotlib.image.imsave(path, array)
 
     
     
@@ -106,13 +109,30 @@ def segment_with_sam(predictor,image_path, boxes):
     return image,masks,image_np
 
 
-def save_images(folder_name,image,mask) :
-    os.makedirs(f"output/{folder_name}", exist_ok=True)
+def save_images(folder_name,image,mask,parent="output") :
+
+    os.makedirs(f"{parent}/{folder_name}", exist_ok=True)
     
-    image.save(f"output/{folder_name}/Original_Image.jpg")
+    image.save(f"{parent}/{folder_name}/Original_Image.jpg")
     mask_np = (mask[0] > 0).astype(np.uint8) * 255
     mask_image = Image.fromarray(mask_np)
-    mask_image.save(f"output/{folder_name}/mask.png")
+    mask_image.save(f"{parent}/{folder_name}/mask.png")
+
+
+def extract_object(original_img, mask_img):
+    object_img = cv2.bitwise_and(original_img, original_img, mask=mask_img)
+    return object_img
+
+# Step 2: Shift the object by applying an affine transformation
+def shift_object(object_img, mask_img, x_shift, y_shift):
+    rows, cols, _ = object_img.shape
+    M = np.float32([[1, 0, x_shift], [0, 1, y_shift]])  # Affine transform matrix
+    shifted_object_img = cv2.warpAffine(object_img, M, (cols, rows))
+    shifted_mask_img = cv2.warpAffine(mask_img, M, (cols, rows))
+    return shifted_object_img, shifted_mask_img
+
+
+
 
 
 
@@ -125,7 +145,7 @@ def parse_args():
 
 
     #task1
-    parser.add_argument('--output', type=str, required=True, help='Path to save the output image (e.g., ./generated.png)')
+    parser.add_argument('--output', type=str, help='Path to save the output image (e.g., ./generated.png)')
 
     #task2
     parser.add_argument('--x', type=int, help='X-axis shift (e.g., 80)')
@@ -148,7 +168,73 @@ def main():
         save_images(text_prompt,image,mask)
     
     elif args.x is not None and args.y is not None:
-        pass
+        image_path = args.image
+        text_prompt = args.__dict__['class']
+        x=args.x
+        y=args.y
+        boxes,_ = get_groundingdino_bounding_box(image_path, text_prompt)
+        predictor=build_sam()
+        image,mask,image_np = segment_with_sam(predictor,image_path, boxes)
+        save_images(text_prompt,image,mask,"temp")
+
+        original_img = cv2.imread(f'temp/{text_prompt}/Original_Image.jpg')
+        mask_img = cv2.imread(f'temp/{text_prompt}/mask.png', cv2.IMREAD_GRAYSCALE)  
+
+
+        _, mask_img = cv2.threshold(mask_img, 127, 255, cv2.THRESH_BINARY)
+       
+        if mask_img.shape != original_img.shape:
+            mask_img = cv2.resize(mask_img, (original_img.shape[1], original_img.shape[0]))
+        
+        object_img = extract_object(original_img, mask_img)
+        shifted_object_img, shifted_mask_img = shift_object(object_img, mask_img, x, y)
+    
+# Step 3: Use inpainting to remove the object from its original location
+# Convert images from OpenCV (BGR) to PIL (RGB) for Stable Diffusion
+        # inpainted_image_cv2 = np.array(inpainted_image_pil)
+        # inpainted_image_cv2 = cv2.cvtColor(inpainted_image_cv2, cv2.COLOR_RGB2BGR)
+        # original_img_pil = Image.fromarray(cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB))
+        # mask_img_pil = Image.fromarray(mask_img)
+        # Create an inverse mask of the shifted mask
+        
+        inverse_mask = cv2.bitwise_not(shifted_mask_img)
+        
+        if len(inverse_mask.shape) == 3:
+            inverse_mask = cv2.cvtColor(inverse_mask, cv2.COLOR_BGR2GRAY)
+        
+
+# Ensure the mask is binary (0 or 255)
+        _, inverse_mask = cv2.threshold(inverse_mask, 127, 255, cv2.THRESH_BINARY)
+        
+
+# Resize the mask to match the inpainted image dimensions, if necessary
+        # if inverse_mask.shape != inpainted_image_cv2.shape[:2]:
+        #     inverse_mask = cv2.resize(inverse_mask, (inpainted_image_cv2.shape[1], inpainted_image_cv2.shape[0]))
+
+# Now use the inverse mask to remove the area from the background where the object will be placed
+        
+        background_with_hole = cv2.bitwise_and(original_img, original_img, mask=inverse_mask)
+        cv2.imwrite('bwh.png', background_with_hole)
+        
+        # Ensure the shifted object and background have the same size
+        if shifted_object_img.shape[:2] != background_with_hole.shape[:2]:
+            shifted_object_img = cv2.resize(shifted_object_img, (background_with_hole.shape[1], background_with_hole.shape[0]))
+
+# Ensure both images have the same number of channels   
+        if len(shifted_object_img.shape) == 2:  # if the object is grayscale (single channel)
+            shifted_object_img = cv2.cvtColor(shifted_object_img, cv2.COLOR_GRAY2BGR)  # convert to 3-channel BGR
+
+        if len(background_with_hole.shape) == 2:  # if the background is grayscale (single channel)
+            background_with_hole = cv2.cvtColor(background_with_hole, cv2.COLOR_GRAY2BGR)  # convert to 3-channel BGR
+
+# Now add the shifted object to the new background
+        final_image = cv2.add(background_with_hole, shifted_object_img)
+
+# Save or display the result
+        
+        cv2.imwrite('shifted_object_composite.png', final_image)
+
+
     else:
         print("Invalid command. Either provide '--x' and '--y' or '--output'.")
  

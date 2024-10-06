@@ -4,10 +4,11 @@
 
 
 ### Prerequisites
-```
-Python
-Wget
-```
+
+- Python 3.11
+- WGET
+- Cuda
+
 ## Installation
 
 Install python packages via commands:
@@ -31,7 +32,7 @@ bash scripts/download_model.sh
 
 Using GroundingDino, we are making a Box around the object,which is mentioned in the task, then using Segement-Anything(SAM) we segment the object inside the box. SAM gives us mask image of the object and then we create red mask on the object using mask and original image.
 
- PROMPT = BAGPACK  
+ PROMPT = "BAGPACK"  
 
  Detect the object based on text prompt using [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) 
  ![Box on the object](/Output/annotated/['bagpack'].jpg)
