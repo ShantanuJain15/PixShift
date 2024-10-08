@@ -131,6 +131,19 @@ def shift_object(object_img, mask_img, x_shift, y_shift):
     shifted_mask_img = cv2.warpAffine(mask_img, M, (cols, rows))
     return shifted_object_img, shifted_mask_img
 
+def load_pipeline():
+    pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting", torch_dtype=torch.float16)
+    device="cpu"
+    if(torch.cuda.is_available()) :
+        device="cuda"
+    pipe = pipe.to(device)
+    return pipe
+
+# Inpaint the original area where the object was located
+def inpaint_area(pipe, original_img_pil, mask_img_pil, prompt="Fill the background"):
+    result = pipe(prompt=prompt, image=original_img_pil, mask_image=mask_img_pil).images[0]
+    return result
+
 
 
 
@@ -194,12 +207,19 @@ def main():
         cv2.imwrite(f'Output/task2{text_prompt}/shifted_object.png',shifted_object_img )
         cv2.imwrite(f'Output/task2{text_prompt}/object.png',object_img)
     
-# Step 3: Use inpainting to remove the object from its original location
-# Convert images from OpenCV (BGR) to PIL (RGB) for Stable Diffusion
-        # inpainted_image_cv2 = np.array(inpainted_image_pil)
         # inpainted_image_cv2 = cv2.cvtColor(inpainted_image_cv2, cv2.COLOR_RGB2BGR)
-        # original_img_pil = Image.fromarray(cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB))
-        # mask_img_pil = Image.fromarray(mask_img)
+        original_img_pil = Image.fromarray(cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB))
+        mask_img_pil = Image.fromarray(mask_img)
+    # Perform inpainting on the area where the object was removed
+        pipe=load_pipeline()
+        inpainted_image_pil = inpaint_area(pipe, original_img_pil, mask_img_pil)
+
+# Convert the inpainted image back to OpenCV format
+        inpainted_image_cv2 = np.array(inpainted_image_pil)
+        inpainted_image_cv2 = cv2.cvtColor(inpainted_image_cv2, cv2.COLOR_RGB2BGR)
+
+        cv2.imwrite("inpainted_image_cv2.png", inpainted_image_cv2)
+
         # Create an inverse mask of the shifted mask
         
         inverse_mask = cv2.bitwise_not(shifted_mask_img)
@@ -210,8 +230,8 @@ def main():
 
 # Ensure the mask is binary (0 or 255)
         _, inverse_mask = cv2.threshold(inverse_mask, 127, 255, cv2.THRESH_BINARY)
-        
 
+       
 # Resize the mask to match the inpainted image dimensions, if necessary
         # if inverse_mask.shape != inpainted_image_cv2.shape[:2]:
         #     inverse_mask = cv2.resize(inverse_mask, (inpainted_image_cv2.shape[1], inpainted_image_cv2.shape[0]))
